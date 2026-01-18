@@ -1,17 +1,17 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const fernet = require('fernet');
 
 const app = express();
 const PORT = 3000;
 
-app.use(bodyParser.json());
+// Use built-in express json parser
+app.use(express.json());
 
 app.post('/decrypt', (req, res) => {
   const { token, secret } = req.body;
 
   if (!token || !secret) {
-    return res.status(400).json({ error: 'Missing token or secret in request body' });
+    return res.status(400).json({ error: 'Missing token or secret' });
   }
 
   try {
@@ -19,20 +19,28 @@ app.post('/decrypt', (req, res) => {
     const message = new fernet.Token({
       secret: secretKey,
       token: token,
-      ttl: 0
+      ttl: 0 // Change this if you want to enforce expiration
     });
 
     const decrypted = message.decode();
 
+    // Check if decryption actually returned a value
+    if (!decrypted) {
+        throw new Error("Decryption returned empty result");
+    }
+
     try {
-      const parsed = JSON.parse(decrypted); // Try to parse inner JSON
-      return res.json(parsed);
+      return res.json(JSON.parse(decrypted));
     } catch (e) {
-      return res.json({ decrypted }); // Return as string if not JSON
+      return res.json({ decrypted }); 
     }
 
   } catch (err) {
-    return res.status(400).json({ error: 'Decryption failed', details: err.message });
+    // Improved error logging for debugging
+    return res.status(400).json({ 
+      error: 'Decryption failed', 
+      message: err.message 
+    });
   }
 });
 
