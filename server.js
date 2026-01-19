@@ -2,10 +2,16 @@ const express = require('express');
 const fernet = require('fernet');
 
 const app = express();
-const PORT = 3000;
 
-// Use built-in express json parser
+// FIX: Use Render's dynamic port or default to 3000 for local testing
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
+
+// Health Check Route (Helps you see if the server is up in your browser)
+app.get('/', (req, res) => {
+  res.send('✅ Decryption Server is Running');
+});
 
 app.post('/decrypt', (req, res) => {
   const { token, secret } = req.body;
@@ -19,12 +25,11 @@ app.post('/decrypt', (req, res) => {
     const message = new fernet.Token({
       secret: secretKey,
       token: token,
-      ttl: 0 // Change this if you want to enforce expiration
+      ttl: 0 
     });
 
     const decrypted = message.decode();
 
-    // Check if decryption actually returned a value
     if (!decrypted) {
         throw new Error("Decryption returned empty result");
     }
@@ -36,7 +41,6 @@ app.post('/decrypt', (req, res) => {
     }
 
   } catch (err) {
-    // Improved error logging for debugging
     return res.status(400).json({ 
       error: 'Decryption failed', 
       message: err.message 
@@ -44,6 +48,7 @@ app.post('/decrypt', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+// FIX: Listen on 0.0.0.0 to ensure Render can route traffic to the container
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
